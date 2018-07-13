@@ -1,81 +1,46 @@
 package main
 
-import (
-	"bytes"
-	"fmt"
+import ( 
+  "fmt"
+  "log"
+  "bufio"
+  "os"
+  "io"
+  "time"
 )
 
-type Node struct {
-	key      string
-	value    []string
-	children map[rune]Node
-}
-
 func main() {
-	tags := []string{"abc", "abfde", "dbc"}
-	node := rebuild(tags)
-	fmt.Println(node)
-	fmt.Println(find(node, "abc"))
-}
+  f, err := os.OpenFile("songs", os.O_RDONLY, os.ModePerm)
+  if err != nil {
+    log.Fatalf("open file error: %v", err)
+    return
+  }
+  defer f.Close()
 
-func add_child(n Node, char rune) Node {
-	var buffer bytes.Buffer
-	buffer.WriteString(n.key)
-	buffer.WriteString(string(char))
+  tags := make(map[string]int)
+  reader := bufio.NewReader(f)
+  count := 1
+  for {
+    line, err := reader.ReadString('\n')
+    if err != nil {
+      if err == io.EOF { break }
+      log.Fatalf("read line error: %v", err)
+    }
+    tags[line] = count
+    count += 1
+  }
+  start:= time.Now()
+  n := Rebuild(tags)
+  t := time.Now()
+  fmt.Println("build tags %v", t.Sub(start))
 
-	children := n.children
-	childKey := buffer.String()
+  start = time.Now()
+  r:= Find(n, "hello")
+  t = time.Now()
+  fmt.Println("hello: ", r, t.Sub(start))
 
-	child := Node{
-		value:    []string{childKey},
-		key:      childKey,
-		children: make(map[rune]Node),
-	}
-
-	children[char] = child
-	n.children = children
-	return n
-}
-
-func has_child(n Node, char rune) bool {
-	children := n.children
-	if _, ok := children[char]; ok {
-		return true
-	}
-	return false
-}
-
-func rebuild(tags []string) Node {
-	trie := Node{
-		value:    []string{},
-		key:      "",
-		children: make(map[rune]Node),
-	}
-
-	node := trie
-	parent := node
-	for _, tag := range tags {
-		parent = node
-		for _, char := range tag {
-			if !has_child(node, char) {
-				node = add_child(node, char)
-			}
-			node = node.children[char]
-		}
-		node = parent
-	}
-
-	return node
-}
-
-func find(n Node, word string) []string {
-	parent := n
-	for _, char := range word {
-		if has_child(parent, char) {
-			parent = parent.children[char]
-		} else {
-			return []string{}
-		}
-	}
-	return parent.value
+  start = time.Now()
+  r = Find(n, "st")
+  t = time.Now()
+  fmt.Println("st", r, t.Sub(start))
 }
